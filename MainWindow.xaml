@@ -1,0 +1,54 @@
+<Window x:Class="WinPods.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WinPods" Height="140" Width="320"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize"
+        Opacity="0" Left="0" Top="0">
+
+    <Border x:Name="MainBorder" CornerRadius="12" Background="#F0181818" BorderBrush="#33FFFFFF" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.6" Direction="270"/>
+        </Border.Effect>
+        
+        <Grid Margin="15">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <RowDefinition Height="*"/>    </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,10">
+                <TextBlock Text="OnePlus Buds 3" Foreground="#EEFFFFFF" FontSize="14" FontFamily="Segoe UI Semibold"/>
+                <TextBlock x:Name="TxtStatus" Text=" • Connected" Foreground="#AA00FF00" FontSize="12" FontFamily="Segoe UI" Margin="5,1,0,0"/>
+            </StackPanel>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock x:Name="IconLeft" Text="🎧" FontSize="28" HorizontalAlignment="Center" Foreground="#AAFFFFFF"/>
+                    <TextBlock x:Name="TxtLeft" Text="--" Foreground="#EEFFFFFF" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                    <TextBlock Text="L" Foreground="#66FFFFFF" FontSize="10" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="IconCase" Text="🔋" FontSize="28" HorizontalAlignment="Center" Foreground="#AAFFFFFF"/>
+                    <TextBlock x:Name="TxtCase" Text="--" Foreground="#EEFFFFFF" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                    <TextBlock Text="Case" Foreground="#66FFFFFF" FontSize="10" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <TextBlock x:Name="IconRight" Text="🎧" FontSize="28" HorizontalAlignment="Center" Foreground="#AAFFFFFF">
+                        <TextBlock.RenderTransform>
+                            <ScaleTransform ScaleX="-1"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                    <TextBlock x:Name="TxtRight" Text="--" Foreground="#EEFFFFFF" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                    <TextBlock Text="R" Foreground="#66FFFFFF" FontSize="10" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
