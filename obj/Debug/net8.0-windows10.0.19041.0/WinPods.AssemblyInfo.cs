@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("WinPods")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d5c755a3be56286d77054dbc808c2060cfc53605")]
 [assembly: System.Reflection.AssemblyProductAttribute("WinPods")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WinPods")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

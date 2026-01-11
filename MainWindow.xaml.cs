@@ -12,38 +12,48 @@ namespace WinPods
     public partial class MainWindow : Window
     {
         private BluetoothLEAdvertisementWatcher? _watcher;
-        private DispatcherTimer _hideTimer;
+        private DispatcherTimer _uiTimer;
+        
+        // --- SCOREBOARD ---
+        private int _batL = -1;
+        private int _batR = -1;
+        private int _batC = -1;
+
+        private DateTime _timeL;
+        private DateTime _timeR;
+        private DateTime _timeC;
+        private DateTime _lastPacketGlobal; 
+
         private bool _isVisible = false;
-        private DateTime _lastPacket;
+        
+        // Settings
+        private const int DATA_TIMEOUT = 10; // 10 seconds memory
+        private const int WINDOW_TIMEOUT = 5; // Close after 5 seconds of silence
 
         // Colors
         private readonly SolidColorBrush ActiveColor = new SolidColorBrush(Color.FromRgb(52, 199, 89));
-        private readonly SolidColorBrush InactiveColor = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255));
+        private readonly SolidColorBrush InactiveColor = new SolidColorBrush(Color.FromArgb(80, 255, 255, 255));
         private readonly SolidColorBrush WhiteColor = Brushes.White;
         private readonly SolidColorBrush DimColor = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255));
 
         public MainWindow()
         {
             InitializeComponent();
-            InitializePosition(); // Move to bottom right
-            
-            // Check visibility every 1 second
-            _hideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _hideTimer.Tick += (s, e) => CheckTimeout();
-            _hideTimer.Start();
+            SetPositionBottomRight();
+
+            // Run UI updates 10 times a second
+            _uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _uiTimer.Tick += UpdateUI;
+            _uiTimer.Start();
 
             StartBluetooth();
         }
 
-        private void InitializePosition()
+        private void SetPositionBottomRight()
         {
-            // Calculate Bottom Right Position
-            double screenWidth = SystemParameters.PrimaryScreenWidth;
-            double screenHeight = SystemParameters.PrimaryScreenHeight;
-            double taskbarHeight = 50; // Approximate taskbar buffer
-
-            this.Left = screenWidth - this.Width - 20; // 20px padding from right
-            this.Top = screenHeight - this.Height - taskbarHeight; // Above taskbar
+            var workArea = SystemParameters.WorkArea;
+            this.Left = workArea.Right - this.Width - 20;
+            this.Top = workArea.Bottom - this.Height - 10;
         }
 
         private void StartBluetooth()
@@ -54,14 +64,9 @@ namespace WinPods
                 _watcher.Received += OnPacketReceived;
                 _watcher.Start();
             }
-            catch { /* Ignore startup errors */ }
-        }
-
-        private void CheckTimeout()
-        {
-            if (_isVisible && (DateTime.Now - _lastPacket).TotalSeconds > 5)
+            catch (Exception ex) 
             {
-                SlideOut();
+                System.Diagnostics.Debug.WriteLine($"Bluetooth failed: {ex.Message}");
             }
         }
 
@@ -69,66 +74,77 @@ namespace WinPods
         {
             foreach (var section in args.Advertisement.ManufacturerData)
             {
-                if (section.CompanyId == 0x079A)
+                if (section.CompanyId == 0x079A) // OnePlus
                 {
-                    ParseData(section.Data);
+                    ProcessData(section.Data);
                     break;
                 }
             }
         }
 
-        private void ParseData(IBuffer buffer)
+        private void ProcessData(IBuffer buffer)
         {
             var data = new byte[buffer.Length];
             using (var reader = DataReader.FromBuffer(buffer)) reader.ReadBytes(data);
             if (data.Length < 18) return;
 
-            _lastPacket = DateTime.Now;
+            _lastPacketGlobal = DateTime.Now;
 
-            // --- DECODING ---
             byte prefix = data[4];
             byte mode = data[5];
-
-            int valL = -1, valR = -1, valC = -1;
+            
+            // Raw Values
             int raw15 = data[15] - 81;
             int raw16 = data[16] - 81;
             int raw17 = data[17] - 81;
 
-            // Simple Logic Map
-            if (prefix == 0x00 && mode == 0x01) // Left Only
+            // UPDATE SCOREBOARD
+            // If we see a valid number, write it down and update the timestamp.
+            
+            if (prefix == 0x00 && mode == 0x01) // LEFT BUD ONLY
             {
-                valL = raw16;
+                if (IsValid(raw16)) { _batL = raw16; _timeL = DateTime.Now; }
             }
-            else if (mode == 0x03) // Right Only
+            else if (mode == 0x03) // RIGHT BUD ONLY
             {
-                valR = raw16;
+                if (IsValid(raw16)) { _batR = raw16; _timeR = DateTime.Now; }
             }
-            else // Both / Case
+            else // STANDARD
             {
-                if (raw15 >= 0 && raw15 <= 100) valL = raw15;
-                if (raw16 >= 0 && raw16 <= 100) valC = raw16;
-                if (raw17 >= 0 && raw17 <= 100) valR = raw17;
+                if (IsValid(raw15)) { _batL = raw15; _timeL = DateTime.Now; }
+                if (IsValid(raw17)) { _batR = raw17; _timeR = DateTime.Now; }
+                if (IsValid(raw16)) { _batC = raw16; _timeC = DateTime.Now; }
             }
 
-            Dispatcher.Invoke(() =>
-            {
-                if (!_isVisible) SlideIn();
-                UpdateUI(valL, valR, valC);
-            });
+            if (!_isVisible) Dispatcher.Invoke(SlideIn);
         }
 
-        private void UpdateUI(int l, int r, int c)
+        private void UpdateUI(object? sender, EventArgs e)
         {
-            RenderComponent(TxtLeft, IconLeft, l);
-            RenderComponent(TxtRight, IconRight, r);
-            RenderComponent(TxtCase, IconCase, c);
+            var now = DateTime.Now;
+
+            // Should we hide?
+            if (_isVisible && (now - _lastPacketGlobal).TotalSeconds > WINDOW_TIMEOUT)
+            {
+                SlideOut();
+                return;
+            }
+
+            // Decide what to show based on memory age
+            int displayL = (now - _timeL).TotalSeconds < DATA_TIMEOUT ? _batL : -1;
+            int displayR = (now - _timeR).TotalSeconds < DATA_TIMEOUT ? _batR : -1;
+            int displayC = (now - _timeC).TotalSeconds < DATA_TIMEOUT ? _batC : -1;
+
+            Render(TxtLeft, IconLeft, displayL);
+            Render(TxtRight, IconRight, displayR);
+            Render(TxtCase, IconCase, displayC);
         }
 
-        private void RenderComponent(TextBlock txt, TextBlock icon, int battery)
+        private void Render(TextBlock txt, TextBlock icon, int val)
         {
-            if (battery >= 0 && battery <= 100)
+            if (IsValid(val))
             {
-                txt.Text = $"{battery}%";
+                txt.Text = $"{val}%";
                 txt.Foreground = ActiveColor;
                 icon.Opacity = 1.0;
                 icon.Foreground = WhiteColor;
@@ -142,36 +158,36 @@ namespace WinPods
             }
         }
 
-        // --- ANIMATIONS ---
         private void SlideIn()
         {
+            if (_isVisible) return;
             _isVisible = true;
             this.Show();
-            
-            // Slide from Right (Left offset)
-            var slide = new DoubleAnimation(this.Left + 50, this.Left, TimeSpan.FromMilliseconds(300))
+
+            var anim = new DoubleAnimation(this.Left + 50, this.Left, TimeSpan.FromMilliseconds(300))
             { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             
-            var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300));
-            
-            this.BeginAnimation(Window.LeftProperty, slide);
+            var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
+
+            this.BeginAnimation(Window.LeftProperty, anim);
             this.BeginAnimation(Window.OpacityProperty, fade);
         }
 
         private void SlideOut()
         {
+            if (!_isVisible) return;
             _isVisible = false;
-            
-            // Slide to Right
-            var slide = new DoubleAnimation(this.Left, this.Left + 50, TimeSpan.FromMilliseconds(300))
+
+            var anim = new DoubleAnimation(this.Left, this.Left + 50, TimeSpan.FromMilliseconds(300))
             { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-            
-            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(300));
-            
+
+            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(200));
             fade.Completed += (s, e) => this.Hide();
-            
-            this.BeginAnimation(Window.LeftProperty, slide);
+
+            this.BeginAnimation(Window.LeftProperty, anim);
             this.BeginAnimation(Window.OpacityProperty, fade);
         }
+
+        private bool IsValid(int b) => b >= 0 && b <= 100;
     }
 }

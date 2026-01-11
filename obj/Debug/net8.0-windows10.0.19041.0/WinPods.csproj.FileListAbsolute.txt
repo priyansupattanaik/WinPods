@@ -13,6 +13,7 @@ D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\WinP
 D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\WinPods.AssemblyInfoInputs.cache
 D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\WinPods.AssemblyInfo.cs
 D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\WinPods.csproj.CoreCompileInputs.cache
+D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\WinPods.sourcelink.json
 D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\WinPods.csproj.Up2Date
 D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\WinPods.dll
 D:\My Creations\Projects\BRAIN\WinPods\obj\Debug\net8.0-windows10.0.19041.0\refint\WinPods.dll
