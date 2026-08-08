@@ -18,7 +18,7 @@
             </Grid.RowDefinitions>
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="OnePlus Buds 3" Foreground="#EEFFFFFF" FontSize="13" FontFamily="Segoe UI Semibold"/>
+                <TextBlock x:Name="DeviceName" Text="OnePlus Buds" Foreground="#EEFFFFFF" FontSize="13" FontFamily="Segoe UI Semibold"/>
                 <Ellipse Width="6" Height="6" Fill="#00FF00" Margin="8,1,0,0" Opacity="0.8"/>
             </StackPanel>
 
@@ -30,19 +30,19 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <TextBlock x:Name="IconLeft" Text="🎧" FontSize="24" HorizontalAlignment="Center" Foreground="#55FFFFFF"/>
+                    <TextBlock x:Name="IconLeft" Text="&#x1F3A7;" FontSize="24" HorizontalAlignment="Center" Foreground="#55FFFFFF" FontFamily="Segoe UI Emoji"/>
                     <TextBlock x:Name="TxtLeft" Text="--" Foreground="#EEFFFFFF" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                     <TextBlock Text="L" Foreground="#66FFFFFF" FontSize="10" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1">
-                    <TextBlock x:Name="IconCase" Text="🔋" FontSize="24" HorizontalAlignment="Center" Foreground="#55FFFFFF"/>
+                    <TextBlock x:Name="IconCase" Text="&#x1F50B;" FontSize="24" HorizontalAlignment="Center" Foreground="#55FFFFFF" FontFamily="Segoe UI Emoji"/>
                     <TextBlock x:Name="TxtCase" Text="--" Foreground="#EEFFFFFF" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                     <TextBlock Text="Case" Foreground="#66FFFFFF" FontSize="10" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2">
-                    <TextBlock x:Name="IconRight" Text="🎧" FontSize="24" HorizontalAlignment="Center" Foreground="#55FFFFFF">
+                    <TextBlock x:Name="IconRight" Text="&#x1F3A7;" FontSize="24" HorizontalAlignment="Center" Foreground="#55FFFFFF" FontFamily="Segoe UI Emoji">
                         <TextBlock.RenderTransform>
                             <ScaleTransform ScaleX="-1"/>
                         </TextBlock.RenderTransform>

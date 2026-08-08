@@ -13,6 +13,7 @@ namespace WinPods
     {
         private BluetoothLEAdvertisementWatcher? _watcher;
         private DispatcherTimer _uiTimer;
+        private readonly object _lock = new object();
         
         // --- SCOREBOARD ---
         private int _batL = -1;
@@ -39,7 +40,7 @@ namespace WinPods
         public MainWindow()
         {
             InitializeComponent();
-            SetPositionBottomRight();
+            UpdateWindowPosition();
 
             // Run UI updates 10 times a second
             _uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
@@ -47,9 +48,17 @@ namespace WinPods
             _uiTimer.Start();
 
             StartBluetooth();
+
+            this.Closed += OnWindowClosed;
         }
 
-        private void SetPositionBottomRight()
+        private void OnWindowClosed(object? sender, EventArgs e)
+        {
+            StopBluetooth();
+            _uiTimer.Stop();
+        }
+
+        private void UpdateWindowPosition()
         {
             var workArea = SystemParameters.WorkArea;
             this.Left = workArea.Right - this.Width - 20;
@@ -66,16 +75,37 @@ namespace WinPods
             }
             catch (Exception ex) 
             {
-                System.Diagnostics.Debug.WriteLine($"Bluetooth failed: {ex.Message}");
+                MessageBox.Show($"Failed to start Bluetooth scanning: {ex.Message}", "WinPods Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
+        private void StopBluetooth()
+        {
+            if (_watcher != null)
+            {
+                _watcher.Stop();
+                _watcher.Received -= OnPacketReceived;
+                _watcher = null;
+            }
+        }
+
+        private string _lastDeviceName = "OnePlus Buds";
+
         private void OnPacketReceived(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)
         {
+            string? localName = args.Advertisement.LocalName;
+
             foreach (var section in args.Advertisement.ManufacturerData)
             {
                 if (section.CompanyId == 0x079A) // OnePlus
                 {
+                    lock (_lock)
+                    {
+                        if (!string.IsNullOrEmpty(localName))
+                        {
+                            _lastDeviceName = localName;
+                        }
+                    }
                     ProcessData(section.Data);
                     break;
                 }
@@ -88,52 +118,75 @@ namespace WinPods
             using (var reader = DataReader.FromBuffer(buffer)) reader.ReadBytes(data);
             if (data.Length < 18) return;
 
-            _lastPacketGlobal = DateTime.Now;
-
-            byte prefix = data[4];
-            byte mode = data[5];
-            
-            // Raw Values
-            int raw15 = data[15] - 81;
-            int raw16 = data[16] - 81;
-            int raw17 = data[17] - 81;
-
-            // UPDATE SCOREBOARD
-            // If we see a valid number, write it down and update the timestamp.
-            
-            if (prefix == 0x00 && mode == 0x01) // LEFT BUD ONLY
+            lock (_lock)
             {
-                if (IsValid(raw16)) { _batL = raw16; _timeL = DateTime.Now; }
-            }
-            else if (mode == 0x03) // RIGHT BUD ONLY
-            {
-                if (IsValid(raw16)) { _batR = raw16; _timeR = DateTime.Now; }
-            }
-            else // STANDARD
-            {
-                if (IsValid(raw15)) { _batL = raw15; _timeL = DateTime.Now; }
-                if (IsValid(raw17)) { _batR = raw17; _timeR = DateTime.Now; }
-                if (IsValid(raw16)) { _batC = raw16; _timeC = DateTime.Now; }
-            }
+                _lastPacketGlobal = DateTime.Now;
 
-            if (!_isVisible) Dispatcher.Invoke(SlideIn);
+                byte prefix = data[4];
+                byte mode = data[5];
+
+                // Raw Values
+                int raw15 = data[15] - 81;
+                int raw16 = data[16] - 81;
+                int raw17 = data[17] - 81;
+
+                // UPDATE SCOREBOARD
+                // If we see a valid number, write it down and update the timestamp.
+
+                if (prefix == 0x00 && mode == 0x01) // LEFT BUD ONLY
+                {
+                    if (IsValid(raw16)) { _batL = raw16; _timeL = DateTime.Now; }
+                }
+                else if (mode == 0x03) // RIGHT BUD ONLY
+                {
+                    if (IsValid(raw16)) { _batR = raw16; _timeR = DateTime.Now; }
+                }
+                else // STANDARD
+                {
+                    if (IsValid(raw15)) { _batL = raw15; _timeL = DateTime.Now; }
+                    if (IsValid(raw17)) { _batR = raw17; _timeR = DateTime.Now; }
+                    if (IsValid(raw16)) { _batC = raw16; _timeC = DateTime.Now; }
+                }
+
+                if (!_isVisible)
+                {
+                    Dispatcher.BeginInvoke(SlideIn);
+                }
+            }
         }
 
         private void UpdateUI(object? sender, EventArgs e)
         {
             var now = DateTime.Now;
+            int displayL, displayR, displayC;
+            bool shouldHide = false;
 
-            // Should we hide?
-            if (_isVisible && (now - _lastPacketGlobal).TotalSeconds > WINDOW_TIMEOUT)
+            lock (_lock)
+            {
+                // Should we hide?
+                if (_isVisible && (now - _lastPacketGlobal).TotalSeconds > WINDOW_TIMEOUT)
+                {
+                    shouldHide = true;
+                }
+
+                // Decide what to show based on memory age
+                displayL = (now - _timeL).TotalSeconds < DATA_TIMEOUT ? _batL : -1;
+                displayR = (now - _timeR).TotalSeconds < DATA_TIMEOUT ? _batR : -1;
+                displayC = (now - _timeC).TotalSeconds < DATA_TIMEOUT ? _batC : -1;
+            }
+
+            if (shouldHide)
             {
                 SlideOut();
                 return;
             }
 
-            // Decide what to show based on memory age
-            int displayL = (now - _timeL).TotalSeconds < DATA_TIMEOUT ? _batL : -1;
-            int displayR = (now - _timeR).TotalSeconds < DATA_TIMEOUT ? _batR : -1;
-            int displayC = (now - _timeC).TotalSeconds < DATA_TIMEOUT ? _batC : -1;
+            UpdateWindowPosition(); // Refresh position in case taskbar or resolution changed
+
+            lock (_lock)
+            {
+                DeviceName.Text = _lastDeviceName;
+            }
 
             Render(TxtLeft, IconLeft, displayL);
             Render(TxtRight, IconRight, displayR);
